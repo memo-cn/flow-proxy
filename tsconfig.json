@@ -1,10 +1,12 @@
 {
+    "include": ["./src", "./lib", ".vite.config.ts"],
     "compilerOptions": {
-        "target": "ESNext",
+        "target": "es5",
         "useDefineForClassFields": true,
         "module": "ESNext",
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "skipLibCheck": true,
+        "sourceMap": true,
 
         /* Bundler mode */
         "moduleResolution": "Bundler",
@@ -19,6 +21,5 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "noFallthroughCasesInSwitch": true
-    },
-    "include": ["./src", "./lib", ".vite.config.ts"]
+    }
 }

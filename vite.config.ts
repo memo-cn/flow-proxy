@@ -58,6 +58,8 @@ export default defineConfig({
         },
     ],
     build: {
+        sourcemap: true,
+        minify: false,
         lib: {
             entry: resolve('./lib/index.ts'),
             formats: ['es', 'cjs'],

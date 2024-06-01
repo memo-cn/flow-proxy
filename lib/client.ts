@@ -1,6 +1,6 @@
 import { name as pkgName } from '../package.json';
 
-import { Operation, defineOperation, OperationType } from './operation';
+import { defineOperation, Operation, OperationType } from './operation';
 import { type Channel, type CommitData, data2Message, message2Data, type ResultData } from './message';
 import { uuid } from './uuid';
 import { deserializeError } from './error-serializer';
@@ -35,13 +35,13 @@ export function defineProperty<T>(
     );
 }
 
-export function deleteProperty<T>(proxy: T, property: string | number): T {
+export function deleteProperty<T>(proxy: T, property: keyof T): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
             defineOperation({
                 type: OperationType.deleteProperty,
-                property,
+                property: property as any,
             }),
         ),
         options,
@@ -110,13 +110,30 @@ export function preventExtensions<T>(proxy: T): ArrayLike<string> {
     );
 }
 
-export function set<T, V>(proxy: T, property: string | number, newValue: V): T {
+export function set<Value>(value: Value, newValue: Value): Value;
+
+export function set<Object, Value>(proxy: Object, property: keyof Object, newValue: Value): Value;
+
+export function set<T, V>(...args: any[]): V {
+    const proxy: T = args[0];
     const { operations, options } = getOperationsAndOptions(proxy);
+    let property: keyof T;
+    let newValue: V;
+    if (args.length >= 3) {
+        [property, newValue] = args.slice(1);
+    } else {
+        newValue = args[1];
+        const lastOperation = operations.pop();
+        if (!lastOperation || lastOperation.type !== OperationType.get) {
+            throw new Error(`[${pkgName}] please specify the 'property' parameter`);
+        }
+        property = lastOperation.property as keyof T;
+    }
     return createProxy(
         operations.concat(
             defineOperation({
                 type: OperationType.set,
-                property,
+                property: property as any,
                 newValue,
             }),
         ),
@@ -289,15 +306,15 @@ function getCommit(channel: Channel) {
     }
 
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
-    channel.onmessage = async function (msg: any) {
+    channel.onmessage = async function (...args: any[]) {
         // 如果原来存在监听器, 对其进行调用。
         if (originalOnMessage) {
             setTimeout(() => {
-                Reflect.apply(originalOnMessage, channel, arguments);
+                Reflect.apply(originalOnMessage, channel, args);
             });
         }
 
-        const resultData = message2Data<ResultData>(msg, 'result');
+        const resultData = message2Data<ResultData>(args[0], 'result');
         if (resultData) {
             const callback = commitId2Callback.get(resultData.commitId);
             if (callback) {

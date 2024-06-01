@@ -1,7 +1,7 @@
 {
     "name": "flow-proxy",
     "private": false,
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "flow-proxy provides a proxy mechanism that records and forwards basic operations (such as property reading, setting, function calls, etc.) to another JavaScript context for replay execution. flow-proxy 提供了一种记录并转发基本操作（如属性读取、赋值、函数调用等）到另一个 JavaScript 上下文中回放执行的代理机制。",
     "keywords": [
         "eval",
@@ -25,23 +25,25 @@
         "prettier": "prettier --write ."
     },
     "devDependencies": {
-        "@babel/preset-env": "^7.24.5",
-        "@json-serialization/function": "^0.0.2",
+        "@babel/core": "^7.24.6",
+        "@babel/preset-env": "^7.24.6",
+        "@json-serialization/function": "^0.0.4",
         "@rollup/plugin-babel": "^6.0.4",
-        "@rollup/plugin-commonjs": "^25.0.7",
+        "@rollup/plugin-commonjs": "^25.0.8",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^15.2.3",
         "@rollup/plugin-replace": "^5.0.5",
         "@rollup/plugin-terser": "^0.4.4",
-        "@types/node": "^20.12.8",
-        "json-serialization": "^0.0.2",
-        "prettier": "^3.2.5",
-        "rimraf": "^5.0.5",
-        "rollup": "^4.17.2",
-        "rollup-plugin-dts": "^6.1.0",
+        "@types/node": "^20.14.1",
+        "json-serialization": "^0.0.4",
+        "prettier": "^3.3.0",
+        "rimraf": "^5.0.7",
+        "rollup": "^4.18.0",
+        "rollup-plugin-dts": "^6.1.1",
         "rollup-plugin-typescript2": "^0.36.0",
+        "tslib": "^2.6.2",
         "typescript": "^5.4.5",
-        "vite": "^5.2.11"
+        "vite": "^5.2.12"
     },
     "files": [
         "dist",

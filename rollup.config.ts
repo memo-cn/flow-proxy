@@ -15,11 +15,13 @@ export default defineConfig(function (commandLineArguments) {
     return rollupOptions;
 });
 
+const sourcemap = true;
+
 const plugins = {
     babel: babel({
         minified: true,
         comments: false,
-        sourceMaps: true,
+        sourceMaps: sourcemap,
         presets: [
             [
                 '@babel/preset-env',
@@ -29,21 +31,24 @@ const plugins = {
             ],
         ],
     }),
-    commonjs: commonjs(),
+    commonjs: commonjs({
+        sourceMap: sourcemap,
+    }),
     dts: dts(),
     json: json(),
     nodeResolve: nodeResolve(),
     replace: replace({
         preventAssignment: true,
         values: {},
+        sourceMap: sourcemap,
     }),
-    terser: terser({
-        sourceMap: true,
-    }),
+    terser: null,
+    // terser: terser({
+    //     sourceMap: sourcemap,
+    // }),
     ts: ts(),
 };
 
-const sourcemap = false;
 const input = './lib/index.ts';
 
 const rollupOptions: RollupOptions[] = [

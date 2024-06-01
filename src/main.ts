@@ -44,9 +44,9 @@ async function arrayDemo() {
 
     array.push('no');
 
-    array = deleteProperty(array, 1);
+    const deleteResult = deleteProperty(array, 1);
 
-    array = set(array, 2, 'memo');
+    const setResult = set(array, 2, 'memo');
 
-    console.log(await commit(array, { omitReturn: false }));
+    console.log(await commit(array));
 }

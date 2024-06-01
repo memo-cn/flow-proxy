@@ -21,15 +21,14 @@ import { serializeError } from './error-serializer';
  */
 export function Export<T>(channel: Channel, module: T): T {
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
-    channel.onmessage = async function (msg: any) {
+    channel.onmessage = async function (...args: any[]) {
         // 如果原来存在监听器, 对其进行调用。
         if (originalOnMessage) {
             setTimeout(() => {
-                Reflect.apply(originalOnMessage, channel, arguments);
+                Reflect.apply(originalOnMessage, channel, args);
             });
         }
-
-        const commitData = message2Data<CommitData>(msg, 'commit');
+        const commitData = message2Data<CommitData>(args[0], 'commit');
         if (commitData) {
             let result: ResultData['result'] = 'success';
             let throw_, return_;
@@ -76,11 +75,11 @@ export function Export<T>(channel: Channel, module: T): T {
                     break;
                 }
                 case OperationType.defineProperty: {
-                    Object.defineProperty(res, op.property, op.attributes);
+                    res = Object.defineProperty(res, op.property, op.attributes);
                     break;
                 }
                 case OperationType.deleteProperty: {
-                    delete res[op.property];
+                    res = delete res[op.property];
                     break;
                 }
                 case OperationType.get: {
@@ -95,7 +94,7 @@ export function Export<T>(channel: Channel, module: T): T {
                     res = Object.getPrototypeOf(res);
                     break;
                 }
-                case 'Has': {
+                case OperationType.has: {
                     res = op.property in res;
                     break;
                 }
@@ -112,7 +111,7 @@ export function Export<T>(channel: Channel, module: T): T {
                     break;
                 }
                 case OperationType.set: {
-                    res[op.property] = op.newValue;
+                    res = res[op.property] = op.newValue;
                     break;
                 }
                 case OperationType.setPrototypeOf: {
