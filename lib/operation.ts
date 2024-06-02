@@ -17,44 +17,60 @@ export function defineOperation<T extends Operation>(operation: T): T {
     return operation;
 }
 
-type Apply = { type: 'Apply'; argArray: any[] };
-type Construct = { type: 'Construct'; argArray: any[] };
+export const enum OperationType {
+    apply = 'apply',
+    construct = 'construct',
+    defineProperty = 'defineProperty',
+    deleteProperty = 'deleteProperty',
+    get = 'get',
+    getOwnPropertyDescriptor = 'getOwnPropertyDescriptor',
+    getPrototypeOf = 'getPrototypeOf',
+    has = 'Has',
+    isExtensible = 'isExtensible',
+    ownKeys = 'ownKeys',
+    preventExtensions = 'preventExtensions',
+    set = 'set',
+    setPrototypeOf = 'setPrototypeOf',
+}
+
+type Apply = { type: OperationType.apply; argArray: any[] };
+type Construct = { type: OperationType.construct; argArray: any[] };
 type DefineProperty = {
-    type: 'DefineProperty';
+    type: OperationType.defineProperty;
     property: string | number;
     attributes: PropertyDescriptor;
 };
 type DeleteProperty = {
-    type: 'DeleteProperty';
+    type: OperationType.deleteProperty;
     property: string | number;
 };
-type Get = { type: 'Get'; property: string };
+type Get = { type: OperationType.get; property: string };
 type GetOwnPropertyDescriptor = {
-    type: 'GetOwnPropertyDescriptor';
+    type: OperationType.getOwnPropertyDescriptor;
     property: string | number;
 };
 type GetPrototypeOf = {
-    type: 'GetPrototypeOf';
+    type: OperationType.getPrototypeOf;
 };
 type Has = {
-    type: 'Has';
+    type: OperationType.has;
     property: string;
 };
 type IsExtensible = {
-    type: 'IsExtensible';
+    type: OperationType.isExtensible;
 };
 type OwnKeys = {
-    type: 'OwnKeys';
+    type: OperationType.ownKeys;
 };
 type PreventExtensions = {
-    type: 'PreventExtensions';
+    type: OperationType.preventExtensions;
 };
 type Set = {
-    type: 'Set';
+    type: OperationType.set;
     property: string | number;
     newValue: any;
 };
 type SetPrototypeOf = {
-    type: 'SetPrototypeOf';
+    type: OperationType.setPrototypeOf;
     prototype: any;
 };

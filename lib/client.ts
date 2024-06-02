@@ -1,6 +1,6 @@
 import { name as pkgName } from '../package.json';
 
-import { Operation, defineOperation } from './operation';
+import { Operation, defineOperation, OperationType } from './operation';
 import { type Channel, type CommitData, data2Message, message2Data, type ResultData } from './message';
 import { uuid } from './uuid';
 import { deserializeError } from './error-serializer';
@@ -26,7 +26,7 @@ export function defineProperty<T>(
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'DefineProperty',
+                type: OperationType.defineProperty,
                 property,
                 attributes,
             }),
@@ -40,7 +40,7 @@ export function deleteProperty<T>(proxy: T, property: string | number): T {
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'DeleteProperty',
+                type: OperationType.deleteProperty,
                 property,
             }),
         ),
@@ -53,7 +53,7 @@ export function getOwnPropertyDescriptor<T>(proxy: T, property: string): boolean
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'GetOwnPropertyDescriptor',
+                type: OperationType.getOwnPropertyDescriptor,
                 property,
             }),
         ),
@@ -66,7 +66,7 @@ export function has<T>(proxy: T, property: string): boolean {
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'Has',
+                type: OperationType.has,
                 property,
             }),
         ),
@@ -79,7 +79,7 @@ export function isExtensible<T>(proxy: T): boolean {
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'IsExtensible',
+                type: OperationType.isExtensible,
             }),
         ),
         options,
@@ -91,7 +91,7 @@ export function ownKeys<T>(proxy: T): ArrayLike<string> {
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'OwnKeys',
+                type: OperationType.ownKeys,
             }),
         ),
         options,
@@ -103,7 +103,7 @@ export function preventExtensions<T>(proxy: T): ArrayLike<string> {
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'PreventExtensions',
+                type: OperationType.preventExtensions,
             }),
         ),
         options,
@@ -115,7 +115,7 @@ export function set<T, V>(proxy: T, property: string | number, newValue: V): T {
     return createProxy(
         operations.concat(
             defineOperation({
-                type: 'Set',
+                type: OperationType.set,
                 property,
                 newValue,
             }),
@@ -131,7 +131,7 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             return createProxy(
                 operations.concat(
                     defineOperation({
-                        type: 'Apply',
+                        type: OperationType.apply,
                         argArray,
                     }),
                 ),
@@ -142,7 +142,7 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             return createProxy(
                 operations.concat(
                     defineOperation({
-                        type: 'Construct',
+                        type: OperationType.construct,
                         argArray,
                     }),
                 ),
@@ -151,30 +151,15 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         },
         defineProperty(target, property: string, attributes: PropertyDescriptor): boolean {
             throw new Error(`[${pkgName}] please use the independent method of exporting as 'defineProperty'`);
-            // operations.push(
-            //     defineOperation({
-            //         type: 'DefineProperty',
-            //         property,
-            //         attributes,
-            //     }),
-            // );
-            // return true;
         },
         deleteProperty(target, property: string): boolean {
             throw new Error(`[${pkgName}] please use the independent method of exporting as 'deleteProperty'`);
-            // operations.push(
-            //     defineOperation({
-            //         type: 'DeleteProperty',
-            //         property,
-            //     }),
-            // );
-            // return true;
         },
         get(target: {}, property: string, receiver: any): any {
             return createProxy(
                 operations.concat(
                     defineOperation({
-                        type: 'Get',
+                        type: OperationType.get,
                         property,
                     }),
                 ),
@@ -190,7 +175,7 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             return createProxy(
                 operations.concat(
                     defineOperation({
-                        type: 'GetPrototypeOf',
+                        type: OperationType.getPrototypeOf,
                     }),
                 ),
                 options,
@@ -210,19 +195,11 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         },
         set(target, property: string, newValue: any, receiver: any): boolean {
             throw new Error(`[${pkgName}] please use the independent method of exporting as 'set'`);
-            // operations.push(
-            //     defineOperation({
-            //         type: 'Set',
-            //         property,
-            //         newValue,
-            //     }),
-            // );
-            // return true;
         },
         setPrototypeOf(target, prototype: object | null): boolean {
             operations.push(
                 defineOperation({
-                    type: 'SetPrototypeOf',
+                    type: OperationType.setPrototypeOf,
                     prototype,
                 }),
             );

@@ -1,5 +1,5 @@
 import { Channel, type CommitData, data2Message, message2Data, type ResultData } from './message';
-import { Operation } from './operation';
+import { Operation, OperationType } from './operation';
 import { serializeError } from './error-serializer';
 
 /**
@@ -66,32 +66,32 @@ export function Export<T>(channel: Channel, module: T): T {
             const op = operations[i];
             // console.log(op.type, op);
             switch (op.type) {
-                case 'Apply': {
+                case OperationType.apply: {
                     const thisArgument = recentRes.length >= 2 ? recentRes[recentRes.length - 2] : null;
                     res = Reflect.apply(res, thisArgument, op.argArray);
                     break;
                 }
-                case 'Construct': {
+                case OperationType.construct: {
                     res = Reflect.construct(res, op.argArray);
                     break;
                 }
-                case 'DefineProperty': {
+                case OperationType.defineProperty: {
                     Object.defineProperty(res, op.property, op.attributes);
                     break;
                 }
-                case 'DeleteProperty': {
+                case OperationType.deleteProperty: {
                     delete res[op.property];
                     break;
                 }
-                case 'Get': {
+                case OperationType.get: {
                     res = res[op.property];
                     break;
                 }
-                case 'GetOwnPropertyDescriptor': {
+                case OperationType.getOwnPropertyDescriptor: {
                     res = Object.getOwnPropertyDescriptor(res, op.property);
                     break;
                 }
-                case 'GetPrototypeOf': {
+                case OperationType.getPrototypeOf: {
                     res = Object.getPrototypeOf(res);
                     break;
                 }
@@ -99,23 +99,23 @@ export function Export<T>(channel: Channel, module: T): T {
                     res = op.property in res;
                     break;
                 }
-                case 'IsExtensible': {
+                case OperationType.isExtensible: {
                     res = Object.isExtensible(res);
                     break;
                 }
-                case 'OwnKeys': {
+                case OperationType.ownKeys: {
                     res = Object.getOwnPropertyNames(res);
                     break;
                 }
-                case 'PreventExtensions': {
+                case OperationType.preventExtensions: {
                     res = Object.preventExtensions(res);
                     break;
                 }
-                case 'Set': {
+                case OperationType.set: {
                     res[op.property] = op.newValue;
                     break;
                 }
-                case 'SetPrototypeOf': {
+                case OperationType.setPrototypeOf: {
                     res = Object.setPrototypeOf(res, op.prototype);
                     break;
                 }

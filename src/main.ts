@@ -49,5 +49,4 @@ async function arrayDemo() {
     array = set(array, 2, 'memo');
 
     console.log(await commit(array, { omitReturn: false }));
-
 }
