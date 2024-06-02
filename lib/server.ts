@@ -3,20 +3,23 @@ import { Operation } from './operation';
 import { serializeError } from './error-serializer';
 
 /**
- *
  * @desc
- *   Start proxy listening on the channel
- *   在信道上启动代理监听
+ *   Export a module to the channel
+ *   将模块导出到信道
  *
  * @param channel
- *   The channel used internally for transmitting call messages.
- *   内部用于传输调用消息的信道。
+ *   The channel used internally for transmitting call messages
+ *   内部用于传输调用消息的信道
  *
- * @param nameResolver
- *   解析名称对应的起始对象
- *   Parse the starting object corresponding to the name
+ * @param module
+ *   The module to be exported
+ *   导出的模块
+ *
+ * @returns module
+ *   The module parameter passed in
+ *   传入的 module 参数
  */
-export function listen(channel: Channel, nameResolver: (name: string | undefined) => any | Promise<any>) {
+export function Export<T>(channel: Channel, module: T): T {
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
     channel.onmessage = async function (msg: any) {
         // 如果原来存在监听器, 对其进行调用。
@@ -31,7 +34,7 @@ export function listen(channel: Channel, nameResolver: (name: string | undefined
             let result: ResultData['result'] = 'success';
             let throw_, return_;
             try {
-                return_ = await execute(commitData.operations, commitData.name);
+                return_ = await parseOperations(commitData.operations);
             } catch (e) {
                 throw_ = e;
                 result = 'failure';
@@ -49,9 +52,11 @@ export function listen(channel: Channel, nameResolver: (name: string | undefined
         }
     };
 
-    async function execute(operations: Operation[], name: string | undefined) {
+    return module;
+
+    async function parseOperations(operations: Operation[]) {
         // 当前的计算结果
-        let res = await nameResolver(name);
+        let res: any = module;
         // 最近几次 get 的结果
         const recentRes: any[] = [res];
         for (let i = 0; i < operations.length; i++) {
@@ -96,7 +101,7 @@ export function listen(channel: Channel, nameResolver: (name: string | undefined
                     break;
                 }
                 case 'OwnKeys': {
-                    res = Reflect.ownKeys(res);
+                    res = Object.getOwnPropertyNames(res);
                     break;
                 }
                 case 'PreventExtensions': {

@@ -24,7 +24,6 @@ export function data2Message<T = never>(data: T) {
 export type CommitData = {
     type: 'commit';
     commitId: string;
-    name: string | undefined;
     operations: Operation[];
 };
 

@@ -188,26 +188,51 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
     return proxy;
 }
 
-const commitId2Callback = new Map<string, { resolve: any; reject: any }>();
-
 /**
  * @desc
- *   Start recording
- *   开始记录
+ *   Import a module from the channel
+ *   从信道导入模块
  *
- * @param name
- *   The name of the starting object
- *   起始对象的名称
+ * @param channel
+ *   The channel used internally for transmitting call messages
+ *   内部用于传输调用消息的信道
+ *
+ * @returns
+ *   The imported module, which is actually a Proxy
+ *   导入的模块, 实际上是一个 Proxy
  */
-export function begin<T>(name?: string): T {
-    return createProxy([], { name });
+export function Import<T>(channel: Channel): T {
+    return createProxy([], { channel });
 }
 
 type BeginOptions = {
-    name?: string;
+    channel: Channel;
 };
 
-type Commit = <T>(proxy: T) => Promise<T>;
+/**
+ * @desc
+ *   Commit the recorded operations.
+ *   提交记录的操作
+ *
+ * @param proxy
+ *   The proxy object containing recorded operations.
+ *   代理对象，包含了记录的操作
+ *
+ * @returns
+ *   The result of replaying the operations.
+ *   操作回放的结果
+ */
+export function commit<T>(proxy: T): Promise<Awaited<T>> {
+    const { options } = getOperationsAndOptions(proxy);
+    const { channel } = options;
+    const commit = getCommit(channel);
+    return commit(proxy);
+}
+
+const channel2Committer = new WeakMap<Channel, Committer>();
+const commitId2Callback = new Map<string, { resolve: any; reject: any }>();
+
+type Committer = <T>(proxy: T) => Promise<Awaited<T>>;
 
 /**
  * @desc
@@ -218,7 +243,12 @@ type Commit = <T>(proxy: T) => Promise<T>;
  *   The channel used internally for transmitting call messages
  *   内部用于传输调用消息的信道
  */
-export function createCommit(channel: Channel): Commit {
+function getCommit(channel: Channel): Committer {
+    {
+        const commit = channel2Committer.get(channel);
+        if (commit) return commit;
+    }
+
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
     channel.onmessage = async function (msg: any) {
         // 如果原来存在监听器, 对其进行调用。
@@ -242,22 +272,21 @@ export function createCommit(channel: Channel): Commit {
         }
     };
 
-    function commit<T>(proxy: T): Promise<T> {
+    function commit<T>(proxy: T): Promise<Awaited<T>> {
         const { operations, options } = getOperationsAndOptions(proxy);
-        const { name } = options;
-        return new Promise<T>((resolve, reject) => {
+        return new Promise<Awaited<T>>((resolve, reject) => {
             const commitId = uuid();
             commitId2Callback.set(commitId, { resolve, reject });
             channel.postMessage(
                 data2Message<CommitData>({
                     type: 'commit',
                     commitId,
-                    name,
                     operations,
                 }),
             );
         });
     }
 
+    channel2Committer.set(channel, commit);
     return commit;
 }

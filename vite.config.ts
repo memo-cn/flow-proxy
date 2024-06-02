@@ -10,7 +10,7 @@ import { exec } from 'child_process';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-import { createCommit, listen } from './lib/index';
+import { Channel, Export } from './lib/index';
 
 export default defineConfig({
     plugins: [
@@ -18,7 +18,7 @@ export default defineConfig({
             name: 'flow-proxy-server',
             apply: 'serve',
             configureServer(viteDevServer) {
-                const channel: Parameters<typeof createCommit>['0'] = {
+                const channel: Channel = {
                     async postMessage(msg) {
                         viteDevServer.hot.send('flow-proxy', await stringify(msg, [functionSerDes.serializer]));
                     },
@@ -32,12 +32,11 @@ export default defineConfig({
 
                 const functionSerDes = createFunctionSerDes(channel);
 
-                listen(channel, function (name) {
-                    if (name === 'fs') return fs;
-                    if (name === 'shell') return exec;
-                    if (name === 'import') return (n: string) => import(n);
-                    if (name === 'require') return require;
-                    throw new Error(`invalid name: ${name}`);
+                Export(channel, {
+                    fs,
+                    exec,
+                    require,
+                    import: (name: string) => import(name),
                 });
             },
         },
