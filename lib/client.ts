@@ -210,6 +210,17 @@ type BeginOptions = {
 };
 
 /**
+ * Commit options 提交选项
+ */
+export type CommitOptions = {
+    /**
+     * Omit the return value, default is false
+     * 忽略返回值，默认为 false
+     */
+    omitReturn: boolean;
+};
+
+/**
  * @desc
  *   Commit the recorded operations.
  *   提交记录的操作
@@ -218,21 +229,26 @@ type BeginOptions = {
  *   The proxy object containing recorded operations.
  *   代理对象，包含了记录的操作
  *
+ * @param commitOptions {CommitOptions}
+ *   Commit options
+ *   提交选项
+ *
  * @returns
  *   The result of replaying the operations.
  *   操作回放的结果
  */
-export function commit<T>(proxy: T): Promise<Awaited<T>> {
+export function commit<T, O extends CommitOptions>(
+    proxy: T,
+    commitOptions?: O,
+): Promise<O['omitReturn'] extends true ? void : Awaited<T>> {
     const { options } = getOperationsAndOptions(proxy);
     const { channel } = options;
     const commit = getCommit(channel);
-    return commit(proxy);
+    return commit(proxy, commitOptions) as any;
 }
 
-const channel2Committer = new WeakMap<Channel, Committer>();
+const channel2Committer = new WeakMap<Channel, ReturnType<typeof getCommit>>();
 const commitId2Callback = new Map<string, { resolve: any; reject: any }>();
-
-type Committer = <T>(proxy: T) => Promise<Awaited<T>>;
 
 /**
  * @desc
@@ -243,10 +259,10 @@ type Committer = <T>(proxy: T) => Promise<Awaited<T>>;
  *   The channel used internally for transmitting call messages
  *   内部用于传输调用消息的信道
  */
-function getCommit(channel: Channel): Committer {
+function getCommit(channel: Channel) {
     {
-        const commit = channel2Committer.get(channel);
-        if (commit) return commit;
+        const commit: any = channel2Committer.get(channel);
+        if (commit) return commit as never;
     }
 
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
@@ -272,7 +288,7 @@ function getCommit(channel: Channel): Committer {
         }
     };
 
-    function commit<T>(proxy: T): Promise<Awaited<T>> {
+    function commit<T>(proxy: T, commitOptions?: CommitOptions): Promise<Awaited<T>> {
         const { operations, options } = getOperationsAndOptions(proxy);
         return new Promise<Awaited<T>>((resolve, reject) => {
             const commitId = uuid();
@@ -282,6 +298,7 @@ function getCommit(channel: Channel): Committer {
                     type: 'commit',
                     commitId,
                     operations,
+                    omitReturn: (commitOptions?.omitReturn && true) || void 0,
                 }),
             );
         });

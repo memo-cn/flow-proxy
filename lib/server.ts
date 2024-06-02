@@ -35,6 +35,9 @@ export function Export<T>(channel: Channel, module: T): T {
             let throw_, return_;
             try {
                 return_ = await parseOperations(commitData.operations);
+                if (commitData.omitReturn) {
+                    return_ = void 0;
+                }
             } catch (e) {
                 throw_ = e;
                 result = 'failure';

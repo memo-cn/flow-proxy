@@ -25,6 +25,7 @@ export type CommitData = {
     type: 'commit';
     commitId: string;
     operations: Operation[];
+    omitReturn?: boolean;
 };
 
 export interface ResultData {
