@@ -1,22 +1,25 @@
 import { Channel, type CommitData, data2Message, message2Data, type ResultData } from './message';
-import { Operation } from './operation';
+import { Operation, OperationType } from './operation';
 import { serializeError } from './error-serializer';
 
 /**
- *
  * @desc
- *   Start proxy listening on the channel
- *   在信道上启动代理监听
+ *   Export a module to the channel
+ *   将模块导出到信道
  *
  * @param channel
- *   The channel used internally for transmitting call messages.
- *   内部用于传输调用消息的信道。
+ *   The channel used internally for transmitting call messages
+ *   内部用于传输调用消息的信道
  *
- * @param nameResolver
- *   解析名称对应的起始对象
- *   Parse the starting object corresponding to the name
+ * @param module
+ *   The module to be exported
+ *   导出的模块
+ *
+ * @returns module
+ *   The module parameter passed in
+ *   传入的 module 参数
  */
-export function listen(channel: Channel, nameResolver: (name: string | undefined) => any | Promise<any>) {
+export function Export<T>(channel: Channel, module: T): T {
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
     channel.onmessage = async function (msg: any) {
         // 如果原来存在监听器, 对其进行调用。
@@ -31,7 +34,10 @@ export function listen(channel: Channel, nameResolver: (name: string | undefined
             let result: ResultData['result'] = 'success';
             let throw_, return_;
             try {
-                return_ = await execute(commitData.operations, commitData.name);
+                return_ = await parseOperations(commitData.operations);
+                if (commitData.omitReturn) {
+                    return_ = void 0;
+                }
             } catch (e) {
                 throw_ = e;
                 result = 'failure';
@@ -49,41 +55,43 @@ export function listen(channel: Channel, nameResolver: (name: string | undefined
         }
     };
 
-    async function execute(operations: Operation[], name: string | undefined) {
+    return module;
+
+    async function parseOperations(operations: Operation[]) {
         // 当前的计算结果
-        let res = await nameResolver(name);
+        let res: any = module;
         // 最近几次 get 的结果
         const recentRes: any[] = [res];
         for (let i = 0; i < operations.length; i++) {
             const op = operations[i];
             // console.log(op.type, op);
             switch (op.type) {
-                case 'Apply': {
+                case OperationType.apply: {
                     const thisArgument = recentRes.length >= 2 ? recentRes[recentRes.length - 2] : null;
                     res = Reflect.apply(res, thisArgument, op.argArray);
                     break;
                 }
-                case 'Construct': {
+                case OperationType.construct: {
                     res = Reflect.construct(res, op.argArray);
                     break;
                 }
-                case 'DefineProperty': {
+                case OperationType.defineProperty: {
                     Object.defineProperty(res, op.property, op.attributes);
-                    continue;
+                    break;
                 }
-                case 'DeleteProperty': {
+                case OperationType.deleteProperty: {
                     delete res[op.property];
-                    continue;
+                    break;
                 }
-                case 'Get': {
+                case OperationType.get: {
                     res = res[op.property];
                     break;
                 }
-                case 'GetOwnPropertyDescriptor': {
+                case OperationType.getOwnPropertyDescriptor: {
                     res = Object.getOwnPropertyDescriptor(res, op.property);
                     break;
                 }
-                case 'GetPrototypeOf': {
+                case OperationType.getPrototypeOf: {
                     res = Object.getPrototypeOf(res);
                     break;
                 }
@@ -91,23 +99,23 @@ export function listen(channel: Channel, nameResolver: (name: string | undefined
                     res = op.property in res;
                     break;
                 }
-                case 'IsExtensible': {
+                case OperationType.isExtensible: {
                     res = Object.isExtensible(res);
                     break;
                 }
-                case 'OwnKeys': {
-                    res = Reflect.ownKeys(res);
+                case OperationType.ownKeys: {
+                    res = Object.getOwnPropertyNames(res);
                     break;
                 }
-                case 'PreventExtensions': {
+                case OperationType.preventExtensions: {
                     res = Object.preventExtensions(res);
                     break;
                 }
-                case 'Set': {
+                case OperationType.set: {
                     res[op.property] = op.newValue;
-                    continue;
+                    break;
                 }
-                case 'SetPrototypeOf': {
+                case OperationType.setPrototypeOf: {
                     res = Object.setPrototypeOf(res, op.prototype);
                     break;
                 }

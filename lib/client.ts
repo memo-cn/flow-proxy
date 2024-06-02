@@ -1,13 +1,11 @@
 import { name as pkgName } from '../package.json';
 
-import { Operation, toOperation } from './operation';
+import { Operation, defineOperation, OperationType } from './operation';
 import { type Channel, type CommitData, data2Message, message2Data, type ResultData } from './message';
 import { uuid } from './uuid';
 import { deserializeError } from './error-serializer';
 
 const proxy2Operation = new WeakMap<any, Operation[]>();
-
-// 记录 proxy 的 channel
 const proxy2Options = new WeakMap<any, BeginOptions>();
 
 function getOperationsAndOptions(proxy: any) {
@@ -19,12 +17,43 @@ function getOperationsAndOptions(proxy: any) {
     return { operations, options };
 }
 
+export function defineProperty<T>(
+    proxy: T,
+    property: string | number,
+    attributes: PropertyDescriptor & ThisType<any>,
+): T {
+    const { operations, options } = getOperationsAndOptions(proxy);
+    return createProxy(
+        operations.concat(
+            defineOperation({
+                type: OperationType.defineProperty,
+                property,
+                attributes,
+            }),
+        ),
+        options,
+    );
+}
+
+export function deleteProperty<T>(proxy: T, property: string | number): T {
+    const { operations, options } = getOperationsAndOptions(proxy);
+    return createProxy(
+        operations.concat(
+            defineOperation({
+                type: OperationType.deleteProperty,
+                property,
+            }),
+        ),
+        options,
+    );
+}
+
 export function getOwnPropertyDescriptor<T>(proxy: T, property: string): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
-                type: 'GetOwnPropertyDescriptor',
+            defineOperation({
+                type: OperationType.getOwnPropertyDescriptor,
                 property,
             }),
         ),
@@ -36,8 +65,8 @@ export function has<T>(proxy: T, property: string): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
-                type: 'Has',
+            defineOperation({
+                type: OperationType.has,
                 property,
             }),
         ),
@@ -49,8 +78,8 @@ export function isExtensible<T>(proxy: T): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
-                type: 'IsExtensible',
+            defineOperation({
+                type: OperationType.isExtensible,
             }),
         ),
         options,
@@ -61,8 +90,8 @@ export function ownKeys<T>(proxy: T): ArrayLike<string> {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
-                type: 'OwnKeys',
+            defineOperation({
+                type: OperationType.ownKeys,
             }),
         ),
         options,
@@ -73,8 +102,22 @@ export function preventExtensions<T>(proxy: T): ArrayLike<string> {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
-                type: 'PreventExtensions',
+            defineOperation({
+                type: OperationType.preventExtensions,
+            }),
+        ),
+        options,
+    );
+}
+
+export function set<T, V>(proxy: T, property: string | number, newValue: V): T {
+    const { operations, options } = getOperationsAndOptions(proxy);
+    return createProxy(
+        operations.concat(
+            defineOperation({
+                type: OperationType.set,
+                property,
+                newValue,
             }),
         ),
         options,
@@ -87,8 +130,8 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         apply(target, thisArg: any, argArray: any[]): any {
             return createProxy(
                 operations.concat(
-                    toOperation({
-                        type: 'Apply',
+                    defineOperation({
+                        type: OperationType.apply,
                         argArray,
                     }),
                 ),
@@ -98,8 +141,8 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         construct(target, argArray: any[], newTarget: Function): object {
             return createProxy(
                 operations.concat(
-                    toOperation({
-                        type: 'Construct',
+                    defineOperation({
+                        type: OperationType.construct,
                         argArray,
                     }),
                 ),
@@ -107,29 +150,16 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             );
         },
         defineProperty(target, property: string, attributes: PropertyDescriptor): boolean {
-            operations.push(
-                toOperation({
-                    type: 'DefineProperty',
-                    property,
-                    attributes,
-                }),
-            );
-            return true;
+            throw new Error(`[${pkgName}] please use the independent method of exporting as 'defineProperty'`);
         },
         deleteProperty(target, property: string): boolean {
-            operations.push(
-                toOperation({
-                    type: 'DeleteProperty',
-                    property,
-                }),
-            );
-            return true;
+            throw new Error(`[${pkgName}] please use the independent method of exporting as 'deleteProperty'`);
         },
         get(target: {}, property: string, receiver: any): any {
             return createProxy(
                 operations.concat(
-                    toOperation({
-                        type: 'Get',
+                    defineOperation({
+                        type: OperationType.get,
                         property,
                     }),
                 ),
@@ -144,8 +174,8 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         getPrototypeOf(target): object | null {
             return createProxy(
                 operations.concat(
-                    toOperation({
-                        type: 'GetPrototypeOf',
+                    defineOperation({
+                        type: OperationType.getPrototypeOf,
                     }),
                 ),
                 options,
@@ -164,19 +194,12 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             throw new Error(`[${pkgName}] please use the independent method of exporting as 'preventExtensions'`);
         },
         set(target, property: string, newValue: any, receiver: any): boolean {
-            operations.push(
-                toOperation({
-                    type: 'Set',
-                    property,
-                    newValue,
-                }),
-            );
-            return true;
+            throw new Error(`[${pkgName}] please use the independent method of exporting as 'set'`);
         },
         setPrototypeOf(target, prototype: object | null): boolean {
             operations.push(
-                toOperation({
-                    type: 'SetPrototypeOf',
+                defineOperation({
+                    type: OperationType.setPrototypeOf,
                     prototype,
                 }),
             );
@@ -188,26 +211,67 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
     return proxy;
 }
 
-const commitId2Callback = new Map<string, { resolve: any; reject: any }>();
-
 /**
  * @desc
- *   Start recording
- *   开始记录
+ *   Import a module from the channel
+ *   从信道导入模块
  *
- * @param name
- *   The name of the starting object
- *   起始对象的名称
+ * @param channel
+ *   The channel used internally for transmitting call messages
+ *   内部用于传输调用消息的信道
+ *
+ * @returns
+ *   The imported module, which is actually a Proxy
+ *   导入的模块, 实际上是一个 Proxy
  */
-export function begin<T>(name?: string): T {
-    return createProxy([], { name });
+export function Import<T>(channel: Channel): T {
+    return createProxy([], { channel });
 }
 
 type BeginOptions = {
-    name?: string;
+    channel: Channel;
 };
 
-type Commit = <T>(proxy: T) => Promise<T>;
+/**
+ * Commit options 提交选项
+ */
+export type CommitOptions = {
+    /**
+     * Omit the return value, default is false
+     * 忽略返回值，默认为 false
+     */
+    omitReturn: boolean;
+};
+
+/**
+ * @desc
+ *   Commit the recorded operations.
+ *   提交记录的操作
+ *
+ * @param proxy
+ *   The proxy object containing recorded operations.
+ *   代理对象，包含了记录的操作
+ *
+ * @param commitOptions {CommitOptions}
+ *   Commit options
+ *   提交选项
+ *
+ * @returns
+ *   The result of replaying the operations.
+ *   操作回放的结果
+ */
+export function commit<T, O extends CommitOptions>(
+    proxy: T,
+    commitOptions?: O,
+): Promise<O['omitReturn'] extends true ? void : Awaited<T>> {
+    const { options } = getOperationsAndOptions(proxy);
+    const { channel } = options;
+    const commit = getCommit(channel);
+    return commit(proxy, commitOptions) as any;
+}
+
+const channel2Committer = new WeakMap<Channel, ReturnType<typeof getCommit>>();
+const commitId2Callback = new Map<string, { resolve: any; reject: any }>();
 
 /**
  * @desc
@@ -218,7 +282,12 @@ type Commit = <T>(proxy: T) => Promise<T>;
  *   The channel used internally for transmitting call messages
  *   内部用于传输调用消息的信道
  */
-export function createCommit(channel: Channel): Commit {
+function getCommit(channel: Channel) {
+    {
+        const commit: any = channel2Committer.get(channel);
+        if (commit) return commit as never;
+    }
+
     const originalOnMessage = typeof channel.onmessage === 'function' ? channel.onmessage : null;
     channel.onmessage = async function (msg: any) {
         // 如果原来存在监听器, 对其进行调用。
@@ -242,22 +311,22 @@ export function createCommit(channel: Channel): Commit {
         }
     };
 
-    function commit<T>(proxy: T): Promise<T> {
+    function commit<T>(proxy: T, commitOptions?: CommitOptions): Promise<Awaited<T>> {
         const { operations, options } = getOperationsAndOptions(proxy);
-        const { name } = options;
-        return new Promise<T>((resolve, reject) => {
+        return new Promise<Awaited<T>>((resolve, reject) => {
             const commitId = uuid();
             commitId2Callback.set(commitId, { resolve, reject });
             channel.postMessage(
                 data2Message<CommitData>({
                     type: 'commit',
                     commitId,
-                    name,
                     operations,
+                    omitReturn: (commitOptions?.omitReturn && true) || void 0,
                 }),
             );
         });
     }
 
+    channel2Committer.set(channel, commit);
     return commit;
 }

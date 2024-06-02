@@ -1,7 +1,17 @@
+let blob: Blob;
 export function uuid() {
     try {
-        if (typeof globalThis.crypto?.randomUUID === 'function') {
+        if ('function' === typeof globalThis.crypto?.randomUUID) {
             return crypto.randomUUID();
+        }
+        if ('function' === typeof globalThis.URL?.createObjectURL && globalThis.Blob) {
+            if (!blob) {
+                blob = new Blob();
+            }
+            const url = URL.createObjectURL(blob);
+            const uuid = url.slice(-36);
+            URL.revokeObjectURL(url);
+            return uuid;
         }
     } catch (e) {}
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
