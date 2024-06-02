@@ -1,13 +1,11 @@
 import { name as pkgName } from '../package.json';
 
-import { Operation, toOperation } from './operation';
+import { Operation, defineOperation } from './operation';
 import { type Channel, type CommitData, data2Message, message2Data, type ResultData } from './message';
 import { uuid } from './uuid';
 import { deserializeError } from './error-serializer';
 
 const proxy2Operation = new WeakMap<any, Operation[]>();
-
-// 记录 proxy 的 channel
 const proxy2Options = new WeakMap<any, BeginOptions>();
 
 function getOperationsAndOptions(proxy: any) {
@@ -19,11 +17,42 @@ function getOperationsAndOptions(proxy: any) {
     return { operations, options };
 }
 
+export function defineProperty<T>(
+    proxy: T,
+    property: string | number,
+    attributes: PropertyDescriptor & ThisType<any>,
+): T {
+    const { operations, options } = getOperationsAndOptions(proxy);
+    return createProxy(
+        operations.concat(
+            defineOperation({
+                type: 'DefineProperty',
+                property,
+                attributes,
+            }),
+        ),
+        options,
+    );
+}
+
+export function deleteProperty<T>(proxy: T, property: string | number): T {
+    const { operations, options } = getOperationsAndOptions(proxy);
+    return createProxy(
+        operations.concat(
+            defineOperation({
+                type: 'DeleteProperty',
+                property,
+            }),
+        ),
+        options,
+    );
+}
+
 export function getOwnPropertyDescriptor<T>(proxy: T, property: string): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
+            defineOperation({
                 type: 'GetOwnPropertyDescriptor',
                 property,
             }),
@@ -36,7 +65,7 @@ export function has<T>(proxy: T, property: string): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
+            defineOperation({
                 type: 'Has',
                 property,
             }),
@@ -49,7 +78,7 @@ export function isExtensible<T>(proxy: T): boolean {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
+            defineOperation({
                 type: 'IsExtensible',
             }),
         ),
@@ -61,7 +90,7 @@ export function ownKeys<T>(proxy: T): ArrayLike<string> {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
+            defineOperation({
                 type: 'OwnKeys',
             }),
         ),
@@ -73,8 +102,22 @@ export function preventExtensions<T>(proxy: T): ArrayLike<string> {
     const { operations, options } = getOperationsAndOptions(proxy);
     return createProxy(
         operations.concat(
-            toOperation({
+            defineOperation({
                 type: 'PreventExtensions',
+            }),
+        ),
+        options,
+    );
+}
+
+export function set<T, V>(proxy: T, property: string | number, newValue: V): T {
+    const { operations, options } = getOperationsAndOptions(proxy);
+    return createProxy(
+        operations.concat(
+            defineOperation({
+                type: 'Set',
+                property,
+                newValue,
             }),
         ),
         options,
@@ -87,7 +130,7 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         apply(target, thisArg: any, argArray: any[]): any {
             return createProxy(
                 operations.concat(
-                    toOperation({
+                    defineOperation({
                         type: 'Apply',
                         argArray,
                     }),
@@ -98,7 +141,7 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         construct(target, argArray: any[], newTarget: Function): object {
             return createProxy(
                 operations.concat(
-                    toOperation({
+                    defineOperation({
                         type: 'Construct',
                         argArray,
                     }),
@@ -107,28 +150,30 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             );
         },
         defineProperty(target, property: string, attributes: PropertyDescriptor): boolean {
-            operations.push(
-                toOperation({
-                    type: 'DefineProperty',
-                    property,
-                    attributes,
-                }),
-            );
-            return true;
+            throw new Error(`[${pkgName}] please use the independent method of exporting as 'defineProperty'`);
+            // operations.push(
+            //     defineOperation({
+            //         type: 'DefineProperty',
+            //         property,
+            //         attributes,
+            //     }),
+            // );
+            // return true;
         },
         deleteProperty(target, property: string): boolean {
-            operations.push(
-                toOperation({
-                    type: 'DeleteProperty',
-                    property,
-                }),
-            );
-            return true;
+            throw new Error(`[${pkgName}] please use the independent method of exporting as 'deleteProperty'`);
+            // operations.push(
+            //     defineOperation({
+            //         type: 'DeleteProperty',
+            //         property,
+            //     }),
+            // );
+            // return true;
         },
         get(target: {}, property: string, receiver: any): any {
             return createProxy(
                 operations.concat(
-                    toOperation({
+                    defineOperation({
                         type: 'Get',
                         property,
                     }),
@@ -144,7 +189,7 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
         getPrototypeOf(target): object | null {
             return createProxy(
                 operations.concat(
-                    toOperation({
+                    defineOperation({
                         type: 'GetPrototypeOf',
                     }),
                 ),
@@ -164,18 +209,19 @@ function createProxy(preOperations: Operation[], options: BeginOptions): any {
             throw new Error(`[${pkgName}] please use the independent method of exporting as 'preventExtensions'`);
         },
         set(target, property: string, newValue: any, receiver: any): boolean {
-            operations.push(
-                toOperation({
-                    type: 'Set',
-                    property,
-                    newValue,
-                }),
-            );
-            return true;
+            throw new Error(`[${pkgName}] please use the independent method of exporting as 'set'`);
+            // operations.push(
+            //     defineOperation({
+            //         type: 'Set',
+            //         property,
+            //         newValue,
+            //     }),
+            // );
+            // return true;
         },
         setPrototypeOf(target, prototype: object | null): boolean {
             operations.push(
-                toOperation({
+                defineOperation({
                     type: 'SetPrototypeOf',
                     prototype,
                 }),

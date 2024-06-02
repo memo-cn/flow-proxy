@@ -13,25 +13,25 @@ export type Operation =
     | Set
     | SetPrototypeOf;
 
-export function toOperation<T extends Operation>(o: T): T {
-    return o;
+export function defineOperation<T extends Operation>(operation: T): T {
+    return operation;
 }
 
 type Apply = { type: 'Apply'; argArray: any[] };
 type Construct = { type: 'Construct'; argArray: any[] };
 type DefineProperty = {
     type: 'DefineProperty';
-    property: string;
+    property: string | number;
     attributes: PropertyDescriptor;
 };
 type DeleteProperty = {
     type: 'DeleteProperty';
-    property: string;
+    property: string | number;
 };
 type Get = { type: 'Get'; property: string };
 type GetOwnPropertyDescriptor = {
     type: 'GetOwnPropertyDescriptor';
-    property: string;
+    property: string | number;
 };
 type GetPrototypeOf = {
     type: 'GetPrototypeOf';
@@ -51,7 +51,7 @@ type PreventExtensions = {
 };
 type Set = {
     type: 'Set';
-    property: string;
+    property: string | number;
     newValue: any;
 };
 type SetPrototypeOf = {

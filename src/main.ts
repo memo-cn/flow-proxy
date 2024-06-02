@@ -1,4 +1,4 @@
-import { Import, Channel, commit, Export, ownKeys } from '../lib';
+import { Import, Channel, commit, Export, ownKeys, set, deleteProperty, defineProperty } from '../lib';
 import { parse, stringify } from 'json-serialization';
 import { createFunctionSerDes } from '@json-serialization/function';
 
@@ -40,17 +40,14 @@ async function arrayDemo() {
 
     const remoteWindow = Import<typeof window>(window);
 
-    const array = remoteWindow.Array.of('hello', 'world', '!');
+    let array = remoteWindow.Array.of('hello', 'world', '!');
 
     array.push('no');
 
-    delete array[1];
+    array = deleteProperty(array, 1);
 
-    array[2] = 'memo';
+    array = set(array, 2, 'memo');
 
-    console.log(await commit(array));
+    console.log(await commit(array, { omitReturn: false }));
 
-    const keys = ownKeys(array);
-
-    console.log(await commit(keys));
 }

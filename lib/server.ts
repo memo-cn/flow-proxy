@@ -77,11 +77,11 @@ export function Export<T>(channel: Channel, module: T): T {
                 }
                 case 'DefineProperty': {
                     Object.defineProperty(res, op.property, op.attributes);
-                    continue;
+                    break;
                 }
                 case 'DeleteProperty': {
                     delete res[op.property];
-                    continue;
+                    break;
                 }
                 case 'Get': {
                     res = res[op.property];
@@ -113,7 +113,7 @@ export function Export<T>(channel: Channel, module: T): T {
                 }
                 case 'Set': {
                     res[op.property] = op.newValue;
-                    continue;
+                    break;
                 }
                 case 'SetPrototypeOf': {
                     res = Object.setPrototypeOf(res, op.prototype);
